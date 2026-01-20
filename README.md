@@ -9,7 +9,7 @@
 ## 📱 Demo
 
 <div align="center">
-  <video src="https://tjgvvuipncwdkhrhsuwo.supabase.co/storage/v1/object/public/public_assets/super_swipy_demo.mov" width="300" />
+  <video src="https://github.com/user-attachments/assets/197f5869-baf4-4c80-af7b-bca9704c60c4" width="300" />
 </div>
 
 ## 🚀 Features
