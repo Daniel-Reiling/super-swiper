@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { useRef } from 'react';
 import { Button, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SuperSwiper, {
   type OverlayLabels,
@@ -33,39 +34,49 @@ const App = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <SuperSwiper
-        ref={superSwiperRef}
-        cards={cardData}
-        renderCard={renderCard}
-        overlayLabels={overlayLabels}
-      />
+    <GestureHandlerRootView style={styles.container}>
+      <SafeAreaView style={styles.container}>
+        <SuperSwiper
+          ref={superSwiperRef}
+          cards={cardData}
+          renderCard={renderCard}
+          overlayLabels={overlayLabels}
+          stackSize={5}
+          cardVerticalOffset={24}
+        />
 
-      <Button
-        title="Swipe left"
-        onPress={() => {
-          superSwiperRef.current?.swipeLeft();
-        }}
-      />
-      <Button
-        title="Swipe right"
-        onPress={() => {
-          superSwiperRef.current?.swipeRight();
-        }}
-      />
-      <Button
-        title="Undo"
-        onPress={() => {
-          superSwiperRef.current?.swipeBack();
-        }}
-      />
-      <Button
-        title="Jump to first card"
-        onPress={() => {
-          superSwiperRef.current?.jumpToCardIndex(0);
-        }}
-      />
-    </SafeAreaView>
+        <Button
+          title="Swipe left"
+          onPress={() => {
+            superSwiperRef.current?.swipeLeft();
+          }}
+        />
+        <Button
+          title="Swipe up"
+          onPress={() => {
+            superSwiperRef.current?.swipeUp();
+          }}
+        />
+        <Button
+          title="Swipe right"
+          onPress={() => {
+            superSwiperRef.current?.swipeRight();
+          }}
+        />
+        <Button
+          title="Undo"
+          onPress={() => {
+            superSwiperRef.current?.swipeBack();
+          }}
+        />
+        <Button
+          title="Jump to first card"
+          onPress={() => {
+            superSwiperRef.current?.jumpToCardIndex(0);
+          }}
+        />
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 

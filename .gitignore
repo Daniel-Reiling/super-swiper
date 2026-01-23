@@ -5,6 +5,13 @@
 # XDE
 .expo/
 
+# iOS / Android
+example/ios/
+example/android/
+
+# yarn 
+.yarn/
+
 # VSCode
 .vscode
 jsconfig.json
