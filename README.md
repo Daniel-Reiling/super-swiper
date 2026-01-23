@@ -15,11 +15,12 @@
 ## 🚀 Features
 
 - **Silky smooth animations**: Built with react-native-reanimated for native 60fps performance
+- **3-directional swiping**: Support for left, right, and up swipe gestures
 - **Gesture-driven**: Powered by react-native-gesture-handler for responsive touch interactions
 - **TypeScript first**: Fully typed API with comprehensive TypeScript support
 - **Customizable**: Extensive props for styling, behavior, and animations
 - **Imperative API**: Programmatic control via ref methods (swipe, undo, jump to card)
-- **Overlay labels**: Built-in support for swipe direction indicators
+- **Overlay labels**: Built-in support for swipe direction indicators (left, right, up)
 - **Memory efficient**: Only renders visible cards in the stack
 - **Cross-platform**: Works seamlessly on iOS, Android, and Web
 
@@ -188,6 +189,18 @@ const overlayLabels: OverlayLabels = {
       paddingLeft: 30,
     },
   },
+  up: {
+    element: (
+      <View style={{ backgroundColor: '#FFD93D', padding: 20, borderRadius: 10 }}>
+        <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>SUPER</Text>
+      </View>
+    ),
+    style: {
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      paddingBottom: 30,
+    },
+  },
 };
 
 export default function App() {
@@ -223,6 +236,10 @@ export default function App() {
         <Button
           title="Swipe Left"
           onPress={() => swiperRef.current?.swipeLeft()}
+        />
+        <Button
+          title="Swipe Up"
+          onPress={() => swiperRef.current?.swipeUp()}
         />
         <Button
           title="Swipe Right"
@@ -266,6 +283,7 @@ export default function App() {
   const swiperRef = useRef<SuperSwiperHandles>(null);
   const [likes, setLikes] = useState<number[]>([]);
   const [passes, setPasses] = useState<number[]>([]);
+  const [superLikes, setSuperLikes] = useState<number[]>([]);
 
   const renderCard = (profile: Profile) => (
     <View style={styles.card}>
@@ -293,6 +311,14 @@ export default function App() {
       ),
       style: styles.rightLabelContainer,
     },
+    up: {
+      element: (
+        <View style={styles.superLabel}>
+          <Text style={styles.labelText}>SUPER</Text>
+        </View>
+      ),
+      style: styles.upLabelContainer,
+    },
   };
 
   return (
@@ -314,6 +340,10 @@ export default function App() {
           setLikes([...likes, index]);
           console.log('Liked:', profiles[index].name);
         }}
+        onSwipedUp={(index) => {
+          setSuperLikes([...superLikes, index]);
+          console.log('Super liked:', profiles[index].name);
+        }}
         onSwipeBack={() => {
           console.log('Undid last swipe');
         }}
@@ -321,12 +351,13 @@ export default function App() {
 
       <View style={styles.controls}>
         <Button title="Pass" onPress={() => swiperRef.current?.swipeLeft()} />
+        <Button title="Super" onPress={() => swiperRef.current?.swipeUp()} />
         <Button title="Undo" onPress={() => swiperRef.current?.swipeBack()} />
         <Button title="Like" onPress={() => swiperRef.current?.swipeRight()} />
       </View>
 
       <View style={styles.stats}>
-        <Text>Likes: {likes.length} | Passes: {passes.length}</Text>
+        <Text>Likes: {likes.length} | Passes: {passes.length} | Super: {superLikes.length}</Text>
       </View>
     </View>
   );
@@ -369,6 +400,13 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#fff',
   },
+  superLabel: {
+    backgroundColor: '#FFD93D',
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
   labelText: {
     color: 'white',
     fontSize: 32,
@@ -385,6 +423,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingTop: 30,
     paddingLeft: 30,
+  },
+  upLabelContainer: {
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 30,
   },
   controls: {
     flexDirection: 'row',
@@ -410,14 +453,17 @@ const styles = StyleSheet.create({
 | `swipeThreshold` | `number` | `screen width * 0.25` | Distance in pixels to trigger a swipe |
 | `cardVerticalOffset` | `number` | `20` | Vertical spacing between stacked cards |
 | `cardScaleStep` | `number` | `0.05` | Scale reduction per card in stack |
-| `initialCardIndex` | `number` | `0` | Index of the first card to show |
-| `disableLeftSwipe` | `boolean` | `false` | Disable swiping left |
-| `disableRightSwipe` | `boolean` | `false` | Disable swiping right |
+| `swipeLeftEnabled` | `boolean` | `true` | Enable swiping left |
+| `swipeRightEnabled` | `boolean` | `true` | Enable swiping right |
+| `swipeUpEnabled` | `boolean` | `true` | Enable swiping up |
+| `swipeBackEnabled` | `boolean` | `true` | Enable swipe back (undo) |
 | `containerStyle` | `StyleProp<ViewStyle>` | `undefined` | Style for the swiper container |
+| `cardStyle` | `StyleProp<ViewStyle>` | `undefined` | Style applied to each card |
 | `overlayLabels` | `OverlayLabels` | `undefined` | Overlay elements shown during swipe |
 | `onSwipedLeft` | `(cardIndex: number) => void` | `undefined` | Called when card is swiped left |
 | `onSwipedRight` | `(cardIndex: number) => void` | `undefined` | Called when card is swiped right |
-| `onSwipeStart` | `(direction: 'left' \| 'right') => void` | `undefined` | Called when swipe gesture starts |
+| `onSwipedUp` | `(cardIndex: number) => void` | `undefined` | Called when card is swiped up |
+| `onSwipeStart` | `(direction: 'left' \| 'right' \| 'up') => void` | `undefined` | Called when swipe gesture starts |
 | `onSwipeEnd` | `(cardIndex: number) => void` | `undefined` | Called when any swipe completes |
 | `onSwipeBack` | `() => void` | `undefined` | Called when undo is triggered |
 
@@ -433,6 +479,7 @@ const swiperRef = useRef<SuperSwiperHandles>(null);
 |--------|------------|-------------|
 | `swipeLeft()` | None | Programmatically swipe the top card left |
 | `swipeRight()` | None | Programmatically swipe the top card right |
+| `swipeUp()` | None | Programmatically swipe the top card up |
 | `swipeBack()` | None | Undo the last swipe and return to previous card |
 | `jumpToCardIndex(index)` | `index: number` | Jump to a specific card index |
 
@@ -447,6 +494,7 @@ interface OverlayLabel {
 interface OverlayLabels {
   left?: OverlayLabel;
   right?: OverlayLabel;
+  up?: OverlayLabel;
 }
 ```
 
@@ -480,7 +528,9 @@ interface OverlayLabels {
 <SuperSwiper
   cards={cards}
   renderCard={renderCard}
-  disableLeftSwipe={true} // Only allow right swipes
+  swipeLeftEnabled={false}  // Disable left swipes
+  swipeUpEnabled={false}     // Disable up swipes
+  // Only right swipe is enabled
 />
 ```
 
@@ -563,4 +613,4 @@ SOFTWARE.
 
 ---
 
-Made with ❤️ by [Daniel Reiling](https://github.com/Daniel-Reiling)
+Made with ☕️ by [Daniel Reiling](https://github.com/Daniel-Reiling)

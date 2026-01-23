@@ -17,6 +17,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import type { CardHandles, CardProps, SwipeDirection } from './types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_OUT_DURATION = 150;
 
 const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
@@ -27,10 +28,12 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
     isActive,
     cardScaleStep,
     cardVerticalOffset,
+    cardStyle,
     overlayLabels,
     swipeThreshold,
-    disableLeftSwipe,
-    disableRightSwipe,
+    swipeLeftEnabled,
+    swipeRightEnabled,
+    swipeUpEnabled,
     onSwipeStart,
     onSwipeComplete,
   } = props;
@@ -56,10 +59,16 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
     triggerFullSwipe('right');
   };
 
+  // Trigger swipe up programmatically
+  const triggerSwipeUp = () => {
+    triggerFullSwipe('up');
+  };
+
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     triggerSwipeLeft,
     triggerSwipeRight,
+    triggerSwipeUp,
   }));
 
   const notifySwipeCompleted = useCallback(
@@ -71,7 +80,7 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
 
   const triggerFullSwipe = useCallback(
     (direction: SwipeDirection) => {
-      if (direction === 'left' && !disableLeftSwipe) {
+      if (direction === 'left' && swipeLeftEnabled) {
         onSwipeStart?.('left');
 
         offsetX.value = withTiming(
@@ -83,7 +92,7 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
             }
           }
         );
-      } else if (direction === 'right' && !disableRightSwipe) {
+      } else if (direction === 'right' && swipeRightEnabled) {
         onSwipeStart?.('right');
 
         offsetX.value = withTiming(
@@ -95,13 +104,27 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
             }
           }
         );
+      } else if (direction === 'up' && swipeUpEnabled) {
+        onSwipeStart?.('up');
+
+        offsetY.value = withTiming(
+          -SCREEN_HEIGHT - 100,
+          { duration: SWIPE_OUT_DURATION },
+          (finished) => {
+            if (finished) {
+              scheduleOnRN(notifySwipeCompleted, 'up');
+            }
+          }
+        );
       }
     },
     [
-      disableLeftSwipe,
-      disableRightSwipe,
+      swipeLeftEnabled,
+      swipeRightEnabled,
+      swipeUpEnabled,
       onSwipeStart,
       offsetX,
+      offsetY,
       notifySwipeCompleted,
     ]
   );
@@ -129,15 +152,16 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
           const shouldSwipe = Math.abs(translationX) > swipeThreshold;
           const swipeDirection = translationX > 0 ? 'right' : 'left';
 
-          if (shouldSwipe && swipeDirection === 'left' && !disableLeftSwipe) {
+          if (shouldSwipe && swipeDirection === 'left' && swipeLeftEnabled) {
             scheduleOnRN(triggerFullSwipe, 'left');
           } else if (
             shouldSwipe &&
             swipeDirection === 'right' &&
-            !disableRightSwipe
+            swipeRightEnabled
           ) {
             scheduleOnRN(triggerFullSwipe, 'right');
           } else {
+            // Snap back animation - swipe was cancelled
             offsetX.value = withSpring(0);
             offsetY.value = withSpring(0);
             scale.value = withSpring(1);
@@ -145,8 +169,8 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
         }),
     [
       isActive,
-      disableLeftSwipe,
-      disableRightSwipe,
+      swipeLeftEnabled,
+      swipeRightEnabled,
       swipeThreshold,
       triggerFullSwipe,
       isDragging,
@@ -213,17 +237,16 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
     return { opacity: newOpacity };
   });
 
-  console.log('Re-rendering Card: ', stackPosition);
-
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={animatedStyle}>
+      <Animated.View style={[animatedStyle, cardStyle]}>
         {content}
 
         {/* Overlay labels */}
         {overlayLabels?.left && (
           <Animated.View
             style={[
+              //eslint-disable-next-line react-native/no-inline-styles
               {
                 position: 'absolute',
                 top: 0,
@@ -245,6 +268,7 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
         {overlayLabels?.right && (
           <Animated.View
             style={[
+              //eslint-disable-next-line react-native/no-inline-styles
               {
                 position: 'absolute',
                 top: 0,
@@ -266,5 +290,7 @@ const Card = forwardRef<CardHandles, CardProps>((props, ref) => {
     </GestureDetector>
   );
 });
+
+Card.displayName = 'Card';
 
 export default React.memo(Card);

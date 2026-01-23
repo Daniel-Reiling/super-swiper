@@ -21,25 +21,43 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
       swipeThreshold = DEFAULT_SWIPE_THRESHOLD,
       cardVerticalOffset = 20,
       cardScaleStep = 0.05,
-      initialCardIndex = 0,
-      disableLeftSwipe = false,
-      disableRightSwipe = false,
+      swipeLeftEnabled = true,
+      swipeRightEnabled = true,
+      swipeUpEnabled = true,
+      swipeBackEnabled = true,
       containerStyle,
+      cardStyle,
       overlayLabels,
       onSwipedLeft,
       onSwipedRight,
+      onSwipedUp,
+      onSwipeBack,
       onSwipeStart,
       onSwipeEnd,
-      onSwipeBack,
     } = props;
 
+    /*
+     *   Prop validation in development mode only.
+     *   This helps catch errors early and prevent performance issues in production.
+     */
+    if (__DEV__) {
+      if (stackSize <= 0) {
+        console.warn('SuperSwiper: stackSize must be greater than 0');
+      }
+      if (swipeThreshold <= 0) {
+        console.warn('SuperSwiper: swipeThreshold must be greater than 0');
+      }
+      if (cardScaleStep < 0 || cardScaleStep > 1) {
+        console.warn('SuperSwiper: cardScaleStep should be between 0 and 1');
+      }
+    }
+
     // State management
-    const currentIndexRef = useRef(initialCardIndex);
+    const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [swipedCardIndices, setSwipedCardIndices] = useState<number[]>([]);
-    const [_, setForceRenderKey] = useState(0);
 
-    // Ref for the active card
+    // Ref for the active card (card on the top of the stack)
     const activeCardRef = useRef<CardHandles>(null);
 
     // Handle swipe start
@@ -50,21 +68,28 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
 
     // Handle swipe completion
     const handleSwipeComplete = (direction: SwipeDirection) => {
-      const cardIndex = currentIndexRef.current;
+      const cardIndex = currentCardIndex;
 
-      // Record swiped card
-      setSwipedCardIndices((prev) => [...prev, cardIndex]);
+      // Record swiped card (cap at 50 to prevent memory leaks)
+      setSwipedCardIndices((prev) => {
+        const updated = [...prev, cardIndex];
+        return updated.length > 50 ? updated.slice(-50) : updated;
+      });
 
       // Trigger callbacks
       if (direction === 'left') {
         onSwipedLeft?.(cardIndex);
-      } else {
+      } else if (direction === 'right') {
         onSwipedRight?.(cardIndex);
+      } else if (direction === 'up') {
+        onSwipedUp?.(cardIndex);
       }
+
+      // Trigger end callback
       onSwipeEnd?.(cardIndex);
 
       // Move to next card
-      currentIndexRef.current += 1;
+      setCurrentCardIndex((prev) => prev + 1);
 
       // Allow new transitions and force re-render
       setIsTransitioning(false);
@@ -78,9 +103,9 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
     // Swipe left programmatically
     const swipeLeft = () => {
       if (
-        disableLeftSwipe ||
+        !swipeLeftEnabled ||
         isTransitioning ||
-        currentIndexRef.current >= cards.length
+        currentCardIndex >= cards.length
       ) {
         return;
       }
@@ -90,22 +115,34 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
     // Swipe right programmatically
     const swipeRight = () => {
       if (
-        disableRightSwipe ||
+        !swipeRightEnabled ||
         isTransitioning ||
-        currentIndexRef.current >= cards.length
+        currentCardIndex >= cards.length
       ) {
         return;
       }
       activeCardRef.current?.triggerSwipeRight();
     };
 
+    // Swipe up programmatically
+    const swipeUp = () => {
+      if (
+        !swipeUpEnabled ||
+        isTransitioning ||
+        currentCardIndex >= cards.length
+      ) {
+        return;
+      }
+      activeCardRef.current?.triggerSwipeUp();
+    };
+
     // Swipe back to previous card
     const swipeBack = () => {
-      if (currentIndexRef.current <= 0 || swipedCardIndices.length === 0) {
+      if (currentCardIndex <= 0 || swipedCardIndices.length === 0) {
         return;
       }
 
-      currentIndexRef.current -= 1;
+      setCurrentCardIndex((prev) => prev - 1);
       setSwipedCardIndices((prev) => prev.slice(0, -1));
       onSwipeBack?.();
     };
@@ -116,21 +153,21 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
         return;
       }
 
-      currentIndexRef.current = index;
-      setForceRenderKey((prev) => prev + 1);
+      setCurrentCardIndex(index);
     };
 
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
       swipeLeft,
       swipeRight,
+      swipeUp,
       swipeBack,
       jumpToCardIndex,
     }));
 
     // Render individual card
     const renderCardItem = (card: any, index: number) => {
-      const currentIndex = currentIndexRef.current;
+      const currentIndex = currentCardIndex;
 
       // Only render cards in the visible stack
       if (index < currentIndex || index >= currentIndex + stackSize) {
@@ -154,10 +191,13 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
           isActive={isActive}
           cardScaleStep={cardScaleStep}
           cardVerticalOffset={cardVerticalOffset}
+          cardStyle={cardStyle}
           overlayLabels={overlayLabels}
           swipeThreshold={swipeThreshold}
-          disableLeftSwipe={disableLeftSwipe}
-          disableRightSwipe={disableRightSwipe}
+          swipeLeftEnabled={swipeLeftEnabled}
+          swipeRightEnabled={swipeRightEnabled}
+          swipeUpEnabled={swipeUpEnabled}
+          swipeBackEnabled={swipeBackEnabled}
           onSwipeStart={handleSwipeStart}
           onSwipeComplete={handleSwipeComplete}
           onSwipeCancel={handleSwipeCancel}
@@ -167,7 +207,7 @@ const SuperSwiper = forwardRef<SuperSwiperHandles, SuperSwiperProps<any>>(
 
     // Render all cards
     const renderCards = () => {
-      if (currentIndexRef.current >= cards.length) {
+      if (currentCardIndex >= cards.length) {
         return null;
       }
 
@@ -194,5 +234,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+SuperSwiper.displayName = 'SuperSwiper';
 
 export default SuperSwiper;
